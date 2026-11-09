@@ -8,6 +8,7 @@
     "build": "vite build"
   },
   "dependencies": {
+    "axios": "1.21.0",
     "cesium": "1.134.0",
     "pdfjs-dist": "5.6.205",
     "vue": "3.5.25"

@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   base: './',
   plugins: [vue(), {
     name: 'copy-cesium-runtime',
@@ -26,5 +26,12 @@ export default defineConfig({
       cpSync(resolve(pdfSource, 'LICENSE'), resolve(pdfDestination, 'LICENSE'));
     },
   }],
-  build: { outDir: '../dist/client/engineering', emptyOutDir: true, chunkSizeWarningLimit: 4500 },
-});
+  build: {
+    outDir: '../dist/client/engineering',
+    emptyOutDir: true,
+    chunkSizeWarningLimit: 4500,
+    rollupOptions: mode === 'pages' ? {
+      input: [resolve('index.html'), resolve('legacy/index.html')],
+    } : undefined,
+  },
+}));
