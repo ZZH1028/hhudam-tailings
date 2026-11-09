@@ -1,0 +1,10 @@
+{
+  "name": "hhudam-tailings-web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "dev": "node --use-env-proxy scripts/preview.mjs",
+    "build:pages": "node scripts/build.mjs --pages"
+  }
+}

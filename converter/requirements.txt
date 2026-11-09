@@ -1,0 +1,3 @@
+# Optional. The prebuilt platform and JSON/CSV depth imports use the standard library.
+vtk>=9.3,<10
+numpy>=1.24,<3

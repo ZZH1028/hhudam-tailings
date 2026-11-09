@@ -1,0 +1,13 @@
+node_modules
+dist/
+.openai/.local/
+.env
+.env.*
+*.sqlite*
+frontend/public/models/original_scene/
+frontend/public/data/handbooks/
+frontend/public/data/scene.json
+frontend/public/models/dam_schematic.glb
+frontend/public/models/terrain_schematic.glb
+frontend/public/data/flood_demo.json
+frontend/public/openfoam_converter.zip

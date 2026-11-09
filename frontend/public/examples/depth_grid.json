@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "name": "格式示例：四点规则网格",
+  "source_type": "format_example",
+  "method": "导入格式示例，非工程模拟",
+  "origin": {
+    "longitude": 118.754,
+    "latitude": 32.045,
+    "height": 0
+  },
+  "vertical_datum": "示例局部高程",
+  "yaw": 0,
+  "grid": {
+    "nx": 2,
+    "ny": 2,
+    "x0": 0,
+    "y0": 0,
+    "dx": 10,
+    "dy": 10
+  },
+  "bed": [
+    0,
+    0,
+    0,
+    0
+  ],
+  "valid": [
+    true,
+    true,
+    true,
+    true
+  ],
+  "frames": [
+    {
+      "time": 0,
+      "depth": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "time": 10,
+      "depth": [
+        1,
+        1.2,
+        1.4,
+        1.6
+      ]
+    }
+  ]
+}

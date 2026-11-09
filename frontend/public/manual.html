@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>工程分析工作台使用说明</title>
+<style>body{margin:0;background:#091625;color:#e1effa;font:16px/1.8 system-ui,sans-serif}main{max-width:780px;margin:auto;padding:34px 22px 64px}h1{font-size:2rem}h2{color:#82dce3;margin-top:2.3em}a{color:#9ce5ec;text-underline-offset:3px}p,li{color:#bfcedb}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#112b3e;padding:15px;border-radius:7px}small{color:#8aa5b7}</style>
+</head>
+<body><main>
+<small>尾矿库安全管理平台 · 工程分析</small>
+<h1>模型、结果和资料怎么导入</h1>
+<p>GitHub Pages 入口使用页面右下角的「原站业务」与「工程分析」切换工作区。原站业务继续使用原账号。若使用私密完整版，管理员从原站左栏进入「工程分析」，普通用户通过「功能菜单」进入模型和资料。</p>
+
+<h2 id="models">三维模型和视角</h2>
+<p>在「三维场景」切换原站实景、示例模型和已导入的模型，再点击总览、俯视、坝前或侧面。支持本地单文件 GLB、可跨域读取的 HTTPS tileset.json、GLB 或 glTF，以及你有权访问的 Cesium ion 资产。对局部模型输入真实的 WGS84 原点、高程和局部 x 轴逆时针旋转角。3D Tiles 通常使用其自身地理变换。</p>
+
+<h2 id="depth">溃坝动画和点查</h2>
+<p>在「溃坝淹没」选择结果，点击「定位计算范围」，播放或拖动时间轴。点击地图或输入 WGS84 经纬度后可读出当前水深、全过程最大水深、首次超过 0.01 米的记录时刻和过程曲线。计算范围外和无有效网格的点单独标记。</p>
+<p>内置矩形河槽结果是演示。可下载<a href="./examples/depth_grid.json">规则水深 JSON</a>和<a href="./examples/depth_grid.csv">规则水深 CSV</a>核对导入格式。</p>
+
+<h2 id="openfoam">OpenFOAM 结果</h2>
+<ol>
+<li>保留完整算例网格及时间目录。并行求解结果先重构。若导出多时刻 VTK，提供 PVD 时间索引及全部关联文件。</li>
+<li>若有经过核对的水深字段，可直接按 JSON 或规则 CSV 生成网格。原始算例、VTK 或 PVD 可用<a href="./openfoam_converter.zip" download>OpenFOAM 转换工具</a>转成 JSON。</li>
+<li>在「溃坝淹没」选择文件或粘贴 HTTPS 文件直链，再确认数据和实景模型的坐标及高程基准。</li>
+</ol>
+<pre>python -m pip install -r requirements.txt
+python openfoam_import.py results.zip depth.json --lon 118.754 --lat 32.045 --height 0</pre>
+<p>请将示例经纬度和原点高程换成你的工程值。VOF 体积分数转换得到的是等效水柱深度。已有实际水深字段时宜直接采用，并核对网格分辨率与高程基准。</p>
+
+<h2 id="knowledge">专业资料与 AI</h2>
+<p>支持本地文件或可直接读取的 PDF、TXT、Markdown 地址。已入库手册可按术语检索，打开引文可以核对页码和片段。扫描件先 OCR 后再导入可以建立文字索引。勾选「使用原站 AI 组织回答」后，问题和命中的片段会发送至原站 AI 接口。接口响应异常时仍显示命中的片段。</p>
+<p>网页内新增的模型、结果和资料保存在当前浏览器。不同设备和不同浏览器各自维护一份导入记录。</p>
+</main></body>
+</html>

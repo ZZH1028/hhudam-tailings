@@ -1,0 +1,56 @@
+:root {
+  color-scheme: dark;
+  color: #eaf5ff;
+  background: #081724;
+  font-family: "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+}
+body { margin: 0; }
+.platform { height: 100vh; height: 100dvh; }
+body[data-workspace="engineering"] .platform {
+  height: calc(100vh - 48px);
+  height: calc(100dvh - 48px);
+}
+.platform iframe { display: block; width: 100%; height: 100%; border: 0; }
+.platform iframe[hidden] { display: none; }
+.platform-menu {
+  position: fixed;
+  z-index: 10;
+  right: max(12px, env(safe-area-inset-right));
+  bottom: max(12px, env(safe-area-inset-bottom));
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid #436681;
+  border-radius: 9px;
+  background: #0e2a40;
+  box-shadow: 0 5px 22px #0007;
+  font-size: 12px;
+}
+.platform-menu button, .platform-menu summary {
+  display: block;
+  padding: 6px 9px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+.platform-menu button[aria-pressed="true"] { border-color: #55c1ca; background: #194d62; }
+.platform-menu button:hover, .platform-menu summary:hover, .platform-links a:hover { background: #1d4760; }
+.platform-menu :focus-visible { outline: 2px solid #84e2ec; outline-offset: 2px; }
+.platform-menu summary { list-style: none; }
+.platform-links {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 6px);
+  display: grid;
+  min-width: 195px;
+  padding: 5px;
+  border: 1px solid #436681;
+  border-radius: 9px;
+  background: #0e2a40;
+}
+.platform-links a { border-radius: 4px; color: #dcefff; text-decoration: none; padding: 8px; }
+.noscript { position: fixed; top: 10px; left: 10px; padding: 12px; background: #0e2a40; }
