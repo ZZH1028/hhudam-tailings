@@ -506,6 +506,8 @@ onMounted(async () => {
       (longitude, latitude) => { if (tab.value === 'flood') probeAt(longitude, latitude); },
       result => { measurement.value = result; });
   } catch (error) {
+    // Clear the blocking widget error panel left by a failed Cesium initialization.
+    document.getElementById('platformMap')?.replaceChildren();
     mapError.value = error.message;
   }
   await boot;
