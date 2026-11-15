@@ -5,6 +5,9 @@ import struct
 from pathlib import Path
 from zipfile import ZipFile, ZIP_DEFLATED
 
+from valley_assets import build_models
+from valley_demo import build_flood
+
 ROOT = Path(__file__).resolve().parents[1]
 PUBLIC = ROOT / "frontend/public"
 
@@ -60,6 +63,9 @@ def generate():
     (PUBLIC/'data/flood_demo.json').write_text(json.dumps(dataset,ensure_ascii=False,separators=(',',':')),encoding='utf-8')
     make_glb(PUBLIC/'models/dam_schematic.glb',bed,g,True)
     make_glb(PUBLIC/'models/terrain_schematic.glb',bed,g,False)
+
+    build_models(PUBLIC)
+    (PUBLIC / "data/flood_valley.json").write_text(json.dumps(build_flood(), ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
 
     with ZipFile(PUBLIC / "openfoam_converter.zip", "w", ZIP_DEFLATED) as archive:
         for file in sorted((ROOT / "converter").iterdir()):

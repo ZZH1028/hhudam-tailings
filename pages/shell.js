@@ -5,11 +5,14 @@ const frames = {
 };
 
 function show(view) {
+  const flood = location.hash === '#flood';
   document.body.dataset.workspace = view;
   for (const [name, frame] of Object.entries(frames)) {
     frame.hidden = name !== view;
     if (name === view && frame.dataset.source && !frame.hasAttribute('src')) {
-      frame.src = frame.dataset.source;
+      frame.src = name === 'engineering' && flood ? frame.dataset.source + '?tab=flood' : frame.dataset.source;
+    } else if (name === 'engineering' && view === name && flood) {
+      frame.contentWindow?.postMessage({ type: 'hhudam:show-flood' }, location.origin);
     }
   }
   for (const button of buttons) {
@@ -18,7 +21,7 @@ function show(view) {
   document.querySelector('details').open = false;
 }
 function currentView() {
-  return location.hash === '#engineering' ? 'engineering' : 'original';
+  return ['#engineering', '#flood'].includes(location.hash) ? 'engineering' : 'original';
 }
 for (const button of buttons) {
   button.addEventListener('click', () => {
@@ -27,5 +30,10 @@ for (const button of buttons) {
     show(view);
   });
 }
+frames.engineering.addEventListener('load', () => {
+  if (location.hash === '#flood' && !frames.engineering.src.endsWith('?tab=flood')) {
+    frames.engineering.contentWindow?.postMessage({ type: 'hhudam:show-flood' }, location.origin);
+  }
+});
 window.addEventListener('hashchange', () => show(currentView()));
 show(currentView());

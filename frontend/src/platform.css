@@ -40,3 +40,40 @@
   .scene-panel .view-grid{margin:9px 0}
   .scene-panel .view-grid button{padding:5px}
 }
+
+.valley-plan { position: absolute; inset: 0; width: 100%; height: 100%; cursor: crosshair; }
+.plan-caption {
+  position: absolute;
+  top: 195px;
+  left: 28px;
+  padding: 6px 9px;
+  border: 1px solid #84b9b55c;
+  border-radius: 5px;
+  background: #142d38e6;
+  color: #d3ebe5;
+  font-size: 11px;
+  pointer-events: none;
+}
+.scene-toolbar button[aria-pressed="true"], .view-grid button[aria-pressed="true"],
+.water-style button[aria-pressed="true"] {
+  border-color: #70c9c7;
+  color: #d9fffa;
+  background: #1a4b59;
+}
+.water-style { display: flex; gap: 6px; margin: 10px 0; }
+.water-style button { flex: 1; }
+.flood-stage { display: block; color: #d8bf96; font-size: 12px; margin: 9px 0; line-height: 1.5; }
+.flood-stage strong { color: #f0dfbf; font-weight: 600; }
+@media (max-width: 800px) {
+  .plan-caption { top: 130px; left: 18px; }
+}
+
+.timeline-stops button {
+  padding: 3px 5px;
+  font-size: 10px;
+  background: transparent;
+  color: #b6cbd5;
+  border-color: transparent;
+}
+.timeline-stops button:hover { color: #90f2ed; background: #224756; }
+@media (max-width: 610px) { .timeline-stops { display: none !important; } }

@@ -9,17 +9,23 @@
       <div class="topbar-right"><span class="service-status"><i></i>导入数据保存在当前浏览器</span><a class="secondary" :href="manualUrl" target="_blank" rel="noopener">使用说明 ↗</a></div>
     </header>
     <main class="workspace">
-      <div class="map-stage" :class="{'map-dimmed':!['scene','flood'].includes(tab)}"><div id="platformMap" aria-label="工程三维地图"></div><div class="map-vignette"></div><div v-if="mapError" class="map-error" role="status"><b>三维场景未能初始化</b><p>{{mapError}}</p><p>请使用支持WebGL2的新版Chrome或Edge。坐标查询、知识库和文件导入仍可使用。</p></div></div>
+      <div class="map-stage" :class="{'map-dimmed':!['scene','flood'].includes(tab)}"><div id="platformMap" aria-label="工程三维地图"></div>
+        <ValleyPlan v-if="mapError && tab==='flood' && snapshot" :data="flood" :snapshot="snapshot"
+          :view="activeView" :style="waterStyle" :water="waterVisible" :sample="probe" @pick="probeAt"/>
+        <div class="map-vignette"></div>
+        <div v-if="mapError && tab==='scene'" class="map-error" role="status"><b>三维场景未能初始化</b><p>请用启用硬件加速的 Chrome 或 Edge 打开三维模型。溃坝回放和水深查询可在地形平面上使用。</p></div></div>
       <template v-if="['scene','flood'].includes(tab)">
-        <section class="scene-heading"><p class="eyebrow">{{tab==='flood'?'INUNDATION ANALYSIS':'SPATIAL WORKSPACE'}}</p><h2>{{tab==='flood'?'溃坝淹没过程':'工程三维场景'}}</h2><p>{{tab==='flood'?'以时间与位置连接每一个水深值。':'切换原站实景和导入模型，查看不同方位。'}}</p></section>
-        <div class="scene-toolbar"><button v-for="v in views" :key="v.id" @click="scene?.view(v.id)">{{v.label}}</button><i></i><button @click="setInteraction('measure')">测距</button><button @click="setInteraction('area')">圈选</button><button v-if="tab==='flood'" @click="setInteraction('probe')">水深拾取</button></div>
+        <section class="scene-heading"><p class="eyebrow">{{tab==='flood'?'INUNDATION ANALYSIS':'SPATIAL WORKSPACE'}}</p><h2>{{tab==='flood'?'溃坝淹没过程':'工程三维场景'}}</h2><p>{{tab==='flood'?'回放溃口发展与下游淹没，点击场景查看水深。':'切换示例地形、原站实景和导入模型。'}}</p></section>
+        <div class="scene-toolbar"><button v-for="v in views" :key="v.id" :aria-pressed="activeView===v.id" @click="selectView(v.id)">{{v.label}}</button><i></i><button @click="setInteraction('measure')">测距</button><button @click="setInteraction('area')">圈选</button><button v-if="tab==='flood'" @click="setInteraction('probe')">水深拾取</button></div>
         <section class="metric-strip" v-if="tab==='scene'"><div><span>三维模型</span><strong>{{models.length}}</strong><small>内置与本机导入</small></div><div><span>水深过程</span><strong>{{floods.length}}</strong><small>可回放的数据集</small></div><div><span>专业资料</span><strong>{{docs.length}}</strong><small>资料目录</small></div></section>
         <div class="map-source"><span class="tiny-dot"></span>{{activeModel?.name||'等待加载模型'}}<span v-if="modelBusy"> · 正在加载…</span><small>{{activeModel?.description}}</small></div>
         <aside class="scene-panel glass"><div class="panel-heading"><span>{{tab==='scene'?'模型与视角':'水深工作台'}}</span><span class="mini-label">{{tab==='scene'?'SCENE':'DEPTH'}}</span></div>
-          <template v-if="tab==='scene'"><label>当前模型<select :value="modelId" @change="changeModel($event.target.value)"><option v-for="m in models" :key="m.id" :value="m.id">{{m.name}}</option></select></label><p class="panel-note">{{activeModel?.description}}</p><div class="view-grid"><button v-for="v in views" :key="v.id" @click="scene?.view(v.id)"><span>{{v.symbol}}</span>{{v.label}}视角</button></div><button class="secondary wide" @click="openImport('model')">＋ 导入 / 添加模型</button><div class="section-line"></div><p class="field-label">空间工具</p><div class="tool-pair"><button @click="setInteraction('measure')">测量距离</button><button @click="setInteraction('area')">圈定区域</button></div><p class="panel-note">{{measurementText}}</p><button class="text-btn" @click="clearMeasurements">清除测量与圈选</button><div class="section-line"></div><a class="resource-link" :href="manualUrl" rel="noopener" target="_blank">平台使用与导入说明<span>↗</span></a><button v-if="showFlood" class="primary wide scene-enter" @click="setTab('flood')">进入淹没分析 <span>→</span></button></template>
-          <template v-else><label>背景模型<select :value="modelId" @change="changeModel($event.target.value)"><option v-for="m in models" :key="m.id" :value="m.id">{{m.name}}</option></select></label><label>水深数据<select v-model="floodId" @change="loadFlood(true)"><option v-for="f in floods" :key="f.id" :value="f.id">{{f.name}}</option></select></label><div class="source-tag" :class="{demo:isExample}">{{sourceLabel}}</div><div class="depth-stats"><div><span>当前时间</span><strong>{{currentTime.toFixed(1)}}<small> s</small></strong></div><div><span>当前最大水深</span><strong>{{frameStats.maximum.toFixed(2)}}<small> m</small></strong></div></div><div class="tool-pair"><button @click="locateFlood()">定位计算范围</button><button @click="waterVisible=!waterVisible">{{waterVisible?'隐藏水深层':'显示水深层'}}</button></div><button class="secondary wide" @click="openImport('flood')">＋ 导入OpenFOAM / 水深数据</button><div class="section-line"></div><div class="probe-heading"><span>位置水深查询</span><small>地图点击 / 坐标输入</small></div><div class="coordinate-form"><input type="number" step="any" v-model="probeLon" placeholder="经度" aria-label="查询经度"><input type="number" step="any" v-model="probeLat" placeholder="纬度" aria-label="查询纬度"><button @click="probeAt(probeLon,probeLat)">查询</button></div><div v-if="probe" class="probe-result"><span>{{probe.status==='wet'?'当前淹没水深':probe.status==='dry'?'当前状态：干燥':probe.status==='outside'?'超出模拟范围':'没有有效计算网格'}}</span><strong v-if="probe.depth!=null">{{probe.depth.toFixed(3)}}<small> m</small></strong><p v-else>{{probe.message}}</p><div v-if="probe.depth!=null" class="probe-details"><span>全过程最大 <b>{{probe.maximum_depth.toFixed(3)}} m</b></span><span>首次超过0.01m <b>{{probe.first_wet_time==null?'未发生':probe.first_wet_time+' s'}}</b></span></div><TrendChart v-if="probe.history" :values="probe.history" :labels="probe.times.map(t=>t+'s')" label="选定位置的水深过程"/></div><div v-else class="probe-empty"><button class="text-btn" @click="probeCenter">查询网格中心示例</button><span aria-hidden="true">＋</span><p>点击计算范围内任意位置<br>查询该点水深与过程曲线</p></div><details class="method-note"><summary>水深来源与计算口径</summary><p>{{flood?.method}}</p><p>高程基准：{{flood?.vertical_datum}}。范围外与缺测点不会显示为0米。</p></details></template>
+          <template v-if="tab==='scene'"><label>当前模型<select :value="modelId" @change="changeModel($event.target.value)"><option v-for="m in models" :key="m.id" :value="m.id">{{m.name}}</option></select></label><p class="panel-note">{{activeModel?.description}}</p><div class="view-grid"><button v-for="v in views" :key="v.id" :aria-pressed="activeView===v.id" @click="selectView(v.id)"><span>{{v.symbol}}</span>{{v.label}}</button></div><button class="secondary wide" @click="openImport('model')">＋ 导入 / 添加模型</button><div class="section-line"></div><p class="field-label">空间工具</p><div class="tool-pair"><button @click="setInteraction('measure')">测量距离</button><button @click="setInteraction('area')">圈定区域</button></div><p class="panel-note">{{measurementText}}</p><button class="text-btn" @click="clearMeasurements">清除测量与圈选</button><div class="section-line"></div><a class="resource-link" :href="manualUrl" rel="noopener" target="_blank">平台使用与导入说明<span>↗</span></a><button v-if="showFlood" class="primary wide scene-enter" @click="setTab('flood')">进入淹没分析 <span>→</span></button></template>
+          <template v-else><label>背景模型<select :value="modelId" @change="changeModel($event.target.value)"><option v-for="m in models" :key="m.id" :value="m.id">{{m.name}}</option></select></label><label>水深数据<select v-model="floodId" @change="loadFlood(true)"><option v-for="f in floods" :key="f.id" :value="f.id">{{f.name}}</option></select></label><div class="source-tag" :class="{demo:isExample}">{{sourceLabel}}</div>
+          <p v-if="flood?.bedIndices" class="flood-stage">当前阶段 <strong>{{stageLabel}}</strong></p>
+          <div class="water-style" aria-label="水面显示方式"><button type="button" :aria-pressed="waterStyle==='water'" @click="waterStyle='water'">水流表现</button><button type="button" :aria-pressed="waterStyle==='depth'" @click="waterStyle='depth'">水深分级</button></div><div class="depth-stats"><div><span>当前时间</span><strong>{{currentTime.toFixed(1)}}<small> s</small></strong></div><div><span>当前最大水深</span><strong>{{frameStats.maximum.toFixed(2)}}<small> m</small></strong></div></div><div class="tool-pair"><button @click="locateFlood()">定位计算范围</button><button @click="waterVisible=!waterVisible">{{waterVisible?'隐藏水深层':'显示水深层'}}</button></div><button class="secondary wide" @click="openImport('flood')">＋ 导入OpenFOAM / 水深数据</button><div class="section-line"></div><div class="probe-heading"><span>位置水深查询</span><small>地图点击 / 坐标输入</small></div><div class="coordinate-form"><input type="number" step="any" v-model="probeLon" placeholder="经度" aria-label="查询经度"><input type="number" step="any" v-model="probeLat" placeholder="纬度" aria-label="查询纬度"><button @click="probeAt(probeLon,probeLat)">查询</button></div><div v-if="probe" class="probe-result"><span>{{probe.status==='wet'?'当前淹没水深':probe.status==='dry'?'当前状态：干燥':probe.status==='outside'?'超出模拟范围':'没有有效计算网格'}}</span><strong v-if="probe.depth!=null">{{probe.depth.toFixed(3)}}<small> m</small></strong><p v-else>{{probe.message}}</p><div v-if="probe.depth!=null" class="probe-details"><span>全过程最大 <b>{{probe.maximum_depth.toFixed(3)}} m</b></span><span>首次超过0.01m <b>{{probe.first_wet_time==null?'未发生':probe.first_wet_time+' s'}}</b></span></div><TrendChart v-if="probe.history" :values="probe.history" :labels="probe.times.map(t=>t+'s')" label="选定位置的水深过程"/></div><div v-else class="probe-empty"><button class="text-btn" @click="probeCenter">查询网格中心示例</button><span aria-hidden="true">＋</span><p>点击计算范围内任意位置<br>查询该点水深与过程曲线</p></div><details class="method-note"><summary>水深来源与计算口径</summary><p>{{flood?.method}}</p><p>高程基准：{{flood?.vertical_datum}}。范围外与缺测点不会显示为0米。</p></details></template>
         </aside>
-        <div v-if="tab==='flood'&&flood" class="timeline glass"><button class="play-button" @click="playing=!playing" :aria-label="playing?'暂停':'播放'">{{playing?'Ⅱ':'▶'}}</button><button class="timeline-reset" @click="frame=0;playing=false" title="回到开始">↺</button><div class="timeline-slider"><div><b>{{flood.name}}</b><span>{{currentTime.toFixed(1)}} / {{flood.frames.at(-1).time}} s</span></div><input type="range" v-model.number="frame" min="0" :max="flood.frames.length-1" step="1" aria-label="模拟时间轴"></div><select v-model.number="playSpeed" aria-label="播放倍速"><option v-for="n in [1,2,4,8,16]" :key="n" :value="n">{{n}}×</option></select></div><div v-if="tab==='flood'&&waterVisible" class="depth-legend glass"><span>淹没水深 / m</span><div><i v-for="(color,i) in depthColors" :key="i" :style="{background:color}"></i></div><p><span>0</span><span>0.5</span><span>2</span><span>4+</span></p></div>
+        <div v-if="tab==='flood'&&flood" class="timeline glass"><button class="play-button" @click="playing=!playing" :aria-label="playing?'暂停':'播放'">{{playing?'Ⅱ':'▶'}}</button><button class="timeline-reset" @click="seekFrame(0)" title="回到开始">↺</button><div class="timeline-slider"><div><b>{{flood.name}}</b><span>{{currentTime.toFixed(1)}} / {{flood.frames.at(-1).time}} s</span></div><input type="range" :value="frame" @input="seekFrame(Number($event.target.value))" min="0" :max="flood.frames.length-1" step="1" aria-label="模拟时间轴"><div class="timeline-stops" v-if="flood.bedIndices"><button v-for="stop in floodStops" :key="stop.frame" type="button" @click="seekFrame(stop.frame)">{{stop.label}}</button></div></div><select v-model.number="playSpeed" aria-label="播放倍速"><option v-for="n in [1,2,4,8,16]" :key="n" :value="n">{{n}}×</option></select></div><div v-if="tab==='flood'&&waterVisible&&waterStyle==='depth'" class="depth-legend glass"><span>淹没水深 / m</span><div><i v-for="(color,i) in depthColors" :key="i" :style="{background:color}"></i></div><p><span>0</span><span>0.5</span><span>2</span><span>4+</span></p></div>
       </template>
       <section v-if="tab==='knowledge'" class="full-panel knowledge-workspace"><div class="page-heading"><div><p class="eyebrow">ENGINEERING KNOWLEDGE</p><h2>专业知识库</h2><p>从资料到答案，保留每一次引用的出处。</p></div><button class="primary" @click="openImport('knowledge')">＋ 导入专业资料</button></div><div class="knowledge-layout"><div class="knowledge-chat surface"><div class="subheading">资料问答<span class="badge">{{useAi?'原站 AI 问答':'资料检索模式'}}</span></div><div class="chat-content" ref="chatScroll"><div v-if="!chat.length" class="chat-empty"><span class="knowledge-symbol">⌘</span><h3>从一个专业问题开始</h3><p>点击引用可核对资料片段、原PDF页或说明。</p><button v-for="q in questionSuggestions" :key="q" @click="ask(q)">{{q}}<span>↗</span></button></div><article v-for="(m,i) in chat" :key="i" :class="['chat-message',m.role]"><span class="message-author">{{m.role==='user'?'你':'专业资料助手'}}</span><div class="message-text">{{m.content}}</div><div v-if="m.sources?.length" class="sources-list"><a v-for="(s,j) in m.sources" :key="s.id" :href="s.url" target="_blank" rel="noopener"><b>[{{j+1}}]</b><span>{{shortDoc(s.name)}}<small>{{s.page ? "PDF 第 " + s.page + " 页" : s.title || "文字资料"}}</small></span><i>↗</i></a></div></article><div v-if="asking" class="chat-loading"><i></i>正在检索资料并组织回答…</div></div><form class="chat-input" @submit.prevent="ask()"><textarea v-model="question" @keydown.enter.exact.prevent="ask()" placeholder="输入专业问题，如：浸润线升高为什么会影响坝坡稳定？" rows="2" aria-label="专业问题"></textarea><button class="primary" :disabled="asking||!question.trim()">发送 ↑</button></form><label class="chat-foot ai-choice"><input v-model="useAi" type="checkbox"> 使用原站 AI 组织回答</label><p class="chat-foot">启用后，问题与命中的资料片段会发送至原站 AI 接口。资料检索可独立使用。</p></div><div class="knowledge-library surface"><div class="subheading">专业资料<span class="mini-label">{{docs.length}} 份</span></div><form class="library-search" @submit.prevent="searchLibrary"><input v-model="searchText" placeholder="按关键词检索，如“反滤层”" aria-label="检索资料"><button>检索</button></form><div v-if="searchResults.length" class="search-results"><button class="text-btn" @click="searchResults=[]">返回资料目录</button><a v-for="s in searchResults" :key="s.id" :href="s.url" target="_blank" rel="noopener"><span>{{shortDoc(s.name)}}{{s.page ? " · 第 " + s.page + " 页" : ""}} ↗</span><p>{{s.text}}</p></a></div><div v-else class="doc-list"><article v-for="d in docs" :key="d.id"><span class="doc-number">{{d.type === "pdf" || d.pageCount ? "PDF" : "资料"}}</span><div><h4 :title="d.name">{{shortDoc(d.name)}}</h4><p>{{documentSummary(d)}}</p><span :class="['doc-state',{pending:d.status==='ocr_pending'}]">{{documentStatus(d)}}</span></div><a v-if="d.url" :href="d.url" target="_blank" rel="noopener" title="打开原文或入库文字">↗</a><button v-if="d.local" type="button" class="text-btn" @click="removeDoc(d)">移除</button></article></div></div></div></section>
     </main>
@@ -34,6 +40,7 @@
           <button type="button" :class="{selected:importMode==='file'}" @click="setImportMode('file')">本地文件</button>
           <button type="button" :class="{selected:importMode==='url'}" @click="setImportMode('url')">HTTPS 地址</button>
           <button v-if="importKind==='model'" type="button" :class="{selected:importMode==='ion'}" @click="setImportMode('ion')">Cesium ion</button>
+          <button v-if="importKind==='model'" type="button" :class="{selected:importMode==='folder'}" @click="setImportMode('folder')">3D Tiles 文件夹</button>
         </div>
         <label v-if="importKind==='model' || importMode==='url'">名称（可选）<input v-model.trim="importMeta.name" maxlength="100" placeholder="留空使用文件名"></label>
         <template v-if="importMode==='url'">
@@ -44,8 +51,12 @@
         <template v-else-if="importMode==='ion'">
           <label>资产编号<input v-model.trim="importMeta.ionId" inputmode="numeric" pattern="[0-9]+" required></label>
           <label>Cesium ion 只读令牌<input v-model="ionToken" type="password" autocomplete="off" required></label>
-          <p class="panel-note">令牌只用于本次打开的工作台。原站实景已缓存时可以直接选用。</p>
+          <p class="panel-note">令牌只用于本次打开的工作台。原站尾矿库 Cesium ion 资产编号为 4617247。</p>
         </template>
+        <label v-else-if="importMode==='folder'" class="file-drop">
+          <span>＋</span><b>{{tileFiles?.length ? '已选 ' + tileFiles.length + ' 个文件' : '选择包含 tileset.json 的文件夹'}}</b>
+          <input type="file" webkitdirectory multiple @change="tileFiles=$event.target.files">
+        </label>
         <label v-else class="file-drop">
           <span>＋</span><b>{{importBlob?.name || fileHint}}</b>
           <input type="file" :accept="accepts[importKind]" @change="importBlob=$event.target.files[0]">
@@ -73,12 +84,16 @@
 <script setup>
 import { computed, markRaw, nextTick, onBeforeUnmount, onMounted, reactive, ref, shallowRef, watch } from 'vue';
 import TrendChart from './TrendChart.vue';
+import ValleyPlan from './ValleyPlan.vue';
 import { assetUrl, deleteLocal, importFile, importUrl, readAll, saveLocal } from './browserData.js';
-import { finiteNumber, parseDepthCsv, queryDepth, readOrigin, validateDepth } from './depthData.js';
+import { finiteNumber, floodFrame, geographicPoint, loadValleyData, parseDepthCsv, queryDepth, readOrigin, validateDepth } from './depthData.js';
+import { addTileDirectory, connectTileWorker, listTileModels } from './localTiles.js';
 import { askDocuments, indexDocument, searchDocuments, starterDocs } from './knowledge.js';
 import './platform.css';
 
-const showFlood = new URLSearchParams(location.search).get('view') !== 'reader';
+const options = new URLSearchParams(location.search);
+const showFlood = options.get('view') !== 'reader';
+const initialTab = showFlood && options.get('tab') === 'flood' ? 'flood' : 'scene';
 const navigation = [
   { id: 'scene', label: '三维场景', icon: '◇' },
   ...(showFlood ? [{ id: 'flood', label: '溃坝淹没', icon: '≋' }] : []),
@@ -87,14 +102,22 @@ const navigation = [
 const views = [
   { id: 'overview', label: '总览', symbol: '◈' },
   { id: 'top', label: '俯视', symbol: '⊞' },
-  { id: 'front', label: '坝前', symbol: '⌑' },
-  { id: 'side', label: '侧面', symbol: '◇' },
+  { id: 'front', label: '溃口近景', symbol: '⌑' },
+  { id: 'upstream', label: '上游库区', symbol: '≈' },
+  { id: 'downstream', label: '下游河道', symbol: '↘' },
+  { id: 'side', label: '坝轴侧面', symbol: '◇' },
 ];
 const depthColors = ['#8bdbed', '#4db8d9', '#228dd0', '#3067c7', '#6045b9', '#9c48b7'];
+const floodStops = [
+  { label: '初始蓄水', frame: 0 },
+  { label: '溃口下切 · 54 s', frame: 27 },
+  { label: '河谷漫溢 · 120 s', frame: 60 },
+];
 const questionSuggestions = ['浸润线升高为什么会影响坝坡稳定？', '土石坝反滤层与排水体有什么作用？', '如何把 OpenFOAM 结果导入网页？'];
 const accepts = { model: '.glb', flood: '.json,.csv', knowledge: '.pdf,.txt,.md' };
 const manualUrl = assetUrl('manual.html');
-const tab = ref('scene');
+const tab = ref(initialTab);
+const activeView = ref('overview');
 const models = shallowRef([]);
 const modelId = ref('');
 const modelBusy = ref(false);
@@ -104,7 +127,9 @@ const floods = shallowRef([]);
 const floodId = ref('demo');
 const flood = shallowRef(null);
 const frame = ref(0);
+const fraction = ref(0);
 const waterVisible = ref(true);
+const waterStyle = ref('water');
 const playing = ref(false);
 const playSpeed = ref(8);
 const probe = ref(null);
@@ -123,6 +148,7 @@ const importDialog = ref(false);
 const importKind = ref('model');
 const importMode = ref('file');
 const importBlob = shallowRef(null);
+const tileFiles = shallowRef(null);
 const importBusy = ref(false);
 const importError = ref('');
 const importProgress = ref('');
@@ -133,16 +159,23 @@ let modelGeneration = 0;
 const objectUrls = new Map();
 
 const activeModel = computed(() => models.value.find(model => model.id === modelId.value));
-const currentTime = computed(() => flood.value?.frames[frame.value]?.time ?? 0);
+const snapshot = computed(() => flood.value ? floodFrame(flood.value, frame.value, fraction.value) : null);
+const currentTime = computed(() => snapshot.value?.time ?? 0);
+const stageLabel = computed(() => {
+  const stage = snapshot.value?.stage || 0;
+  if (stage === 0) return '初始蓄水';
+  if (stage < 0.9) return '溃口下切、拓宽';
+  return '洪水下泄与河谷漫溢';
+});
 const frameStats = computed(() => {
   let maximum = 0;
-  const depths = flood.value?.frames[frame.value]?.depth || [];
+  const depths = snapshot.value?.depth || [];
   for (const [i, depth] of depths.entries()) if (flood.value.valid[i]) maximum = Math.max(maximum, depth);
   return { maximum };
 });
 const isExample = computed(() => ['demonstration', 'format_example'].includes(flood.value?.source_type));
 const sourceLabel = computed(() => ({
-  demonstration: '理想矩形河槽示例 · 非工程预测',
+  demonstration: '山谷溃坝演示 · 合成地形',
   format_example: '格式验证示例 · 非工程预测',
   openfoam: '导入的 OpenFOAM 计算结果',
   imported: '用户导入的水深数据',
@@ -179,22 +212,26 @@ function objectUrl(id, blob) {
 }
 
 async function loadModels() {
-  const local = await readAll('models').catch(() => []);
-  const config = await loadJson('data/scene.json').catch(() => ({}));
+  const [local, tileModels, config] = await Promise.all([
+    readAll('models').catch(() => []),
+    listTileModels().catch(() => []),
+    loadJson('data/scene.json').catch(() => ({})),
+  ]);
   models.value = [
     ...(config.original ? [{
       id: 'original', name: '原站尾矿库实景', kind: 'tileset',
       url: assetUrl('models/original_scene/tileset.json'), description: '原站 Cesium 实景模型缓存',
     }] : []),
     {
-      id: 'schematic', name: '示例坝体与地形', kind: 'glb', url: assetUrl('models/dam_schematic.glb'),
-      longitude: 118.754, latitude: 32.045, height: 0, description: '示意模型，可与理想河槽演示结果配合查看',
+      id: 'valley', name: '山谷尾矿坝演示场景', kind: 'glb', url: assetUrl('models/valley.glb'), valley: true,
+      longitude: 118.754, latitude: 32.045, height: 55, description: '合成地形 · 分期坝体与二维淹没演算',
     },
     {
       id: 'terrain', name: '示例地形', kind: 'glb', url: assetUrl('models/terrain_schematic.glb'),
       longitude: 118.754, latitude: 32.045, height: 0, description: '不含坝体的示意地形',
     },
     ...local.map(model => ({ ...model, url: model.blob ? objectUrl(model.id, model.blob) : model.url })),
+    ...tileModels,
   ];
 }
 
@@ -204,8 +241,15 @@ async function changeModel(id) {
   const generation = ++modelGeneration;
   modelBusy.value = true;
   try {
-    if (scene) await scene.load(model, ionToken.value);
-    if (generation === modelGeneration) modelId.value = id;
+    if (scene) {
+      if (model.tileset) await connectTileWorker();
+      await scene.load(model, ionToken.value);
+    }
+    if (generation === modelGeneration) {
+      modelId.value = id;
+      activeView.value = 'overview';
+      drawFlood();
+    }
   } catch (error) {
     if (generation === modelGeneration) toast(error.message);
   } finally {
@@ -225,22 +269,34 @@ function clearMeasurements() {
   scene?.setMode('probe');
 }
 
+function selectView(kind) {
+  activeView.value = kind;
+  scene?.view(kind);
+}
+
 function drawFlood() {
-  if (scene && tab.value === 'flood' && waterVisible.value && flood.value) {
-    scene.drawFlood(flood.value, frame.value);
-  } else {
-    scene?.clearFlood();
+  if (!scene) return;
+  if (tab.value !== 'flood' || !snapshot.value) {
+    scene.clearFlood();
+    scene.setBreach(0);
+    return;
   }
+  scene.setBreach(snapshot.value.stage);
+  if (waterVisible.value) scene.drawFlood(flood.value, snapshot.value, waterStyle.value);
+  else scene.clearFlood();
 }
 
 function locateFlood() {
-  if (flood.value) scene?.flyGrid(flood.value);
+  if (!flood.value) return;
+  activeView.value = 'top';
+  if (flood.value.bedIndices && activeModel.value?.valley) scene?.view('top');
+  else scene?.flyGrid(flood.value);
 }
 
 async function loadFlood(fly = false) {
   const id = floodId.value;
   try {
-    const next = id === 'demo' ? await (demo ??= loadJson('data/flood_demo.json').then(validateDepth))
+    const next = id === 'demo' ? await (demo ??= loadJson('data/flood_valley.json').then(loadValleyData))
       : floods.value.find(item => item.id === id)?.dataset;
     if (id !== floodId.value || !next) return;
     playing.value = false;
@@ -249,7 +305,11 @@ async function loadFlood(fly = false) {
     probeLon.value = '';
     probeLat.value = '';
     frame.value = 0;
+    fraction.value = 0;
+    waterStyle.value = next.bedIndices ? 'water' : 'depth';
     flood.value = next;
+    if (fly && next.bedIndices && modelId.value !== 'valley') await changeModel('valley');
+    if (id !== floodId.value) return;
     scene?.clearMarker();
     drawFlood();
     if (fly) locateFlood();
@@ -264,13 +324,16 @@ async function setTab(id) {
   tab.value = id;
   if (id === 'flood') {
     scene?.setMode('probe');
-    if (flood.value?.source_type === 'demonstration') await changeModel('schematic');
+    const demoSelected = floodId.value === 'demo';
+    if (demoSelected && modelId.value !== 'valley') await changeModel('valley');
     if (tab.value !== 'flood') return;
     waterVisible.value = true;
     drawFlood();
-    locateFlood();
+    if (demoSelected) selectView('overview');
+    else locateFlood();
   } else {
     scene?.clearFlood();
+    scene?.setBreach(0);
     scene?.clearMarker();
   }
 }
@@ -278,7 +341,7 @@ async function setTab(id) {
 function probeAt(longitude, latitude) {
   if (!flood.value) return;
   try {
-    const result = queryDepth(flood.value, longitude, latitude, frame.value);
+    const result = queryDepth(flood.value, longitude, latitude, frame.value, snapshot.value);
     previousPoint = [result.longitude, result.latitude];
     probe.value = result;
     probeLon.value = result.longitude.toFixed(8);
@@ -292,32 +355,46 @@ function probeAt(longitude, latitude) {
 function probeCenter() {
   const data = flood.value;
   if (!data) return;
-  const coordinates = scene?.gridCenter(data);
-  if (coordinates) probeAt(...coordinates);
-  else probeAt(data.origin.longitude, data.origin.latitude);
+  const { nx, ny, dx, dy, x0, y0 } = data.grid;
+  probeAt(...geographicPoint(x0 + (nx - 1) * dx / 2, y0 + (ny - 1) * dy / 2, data));
 }
 
-watch(waterVisible, drawFlood);
-watch(frame, () => {
+function seekFrame(index) {
+  playing.value = false;
+  fraction.value = 0;
+  frame.value = index;
+}
+
+watch([waterVisible, waterStyle], drawFlood);
+watch([frame, fraction], () => {
   drawFlood();
-  if (previousPoint) probeAt(...previousPoint);
+  if (tab.value === 'flood' && previousPoint) probeAt(...previousPoint);
 });
 watch(playing, active => {
   clearInterval(playback);
   if (!active || !flood.value) return;
-  const frames = flood.value.frames;
-  if (frame.value === frames.length - 1) frame.value = 0;
-  let target = frames[frame.value].time;
+  const { frames } = flood.value;
+  if (frame.value === frames.length - 1) {
+    frame.value = 0;
+    fraction.value = 0;
+  }
+  let time = currentTime.value;
   let last = performance.now();
+  const smoothFrames = Boolean(flood.value.bedIndices);
   playback = setInterval(() => {
     const now = performance.now();
-    target += (now - last) / 1000 * playSpeed.value;
+    time += (now - last) / 1000 * playSpeed.value;
     last = now;
     let next = frame.value;
-    while (next < frames.length - 1 && frames[next + 1].time <= target) next++;
+    while (next < frames.length - 1 && frames[next + 1].time <= time) next++;
     frame.value = next;
-    if (next === frames.length - 1) playing.value = false;
-  }, 90);
+    if (next === frames.length - 1) {
+      fraction.value = 0;
+      playing.value = false;
+    } else if (smoothFrames) {
+      fraction.value = (time - frames[next].time) / (frames[next + 1].time - frames[next].time);
+    }
+  }, 66);
 });
 
 const shortDoc = name => name.replace(/^\d+水工设计手册（第二版）/, '').replace(/\.pdf$/i, '').replace(/\(\d+\)$/, '').trim();
@@ -402,6 +479,7 @@ function openImport(kind) {
   importKind.value = kind;
   setImportMode('file');
   importBlob.value = null;
+  tileFiles.value = null;
   Object.assign(importMeta, {
     name: '', url: '', modelType: 'tileset', ionId: '', longitude: '', latitude: '', height: 0, yaw: 0, vertical_datum: '',
   });
@@ -470,6 +548,17 @@ async function submitImport() {
   importProgress.value = '正在读取文件…';
   importError.value = '';
   try {
+    if (importKind.value === 'model' && importMode.value === 'folder') {
+      importProgress.value = '正在保存本地三维瓦片…';
+      if (scene) await connectTileWorker();
+      const model = await addTileDirectory(tileFiles.value, importMeta.name);
+      models.value = [...models.value, model];
+      await setTab('scene');
+      await changeModel(model.id);
+      importDialog.value = false;
+      toast('3D Tiles 已保存到当前浏览器。');
+      return;
+    }
     const remoteModel = importKind.value === 'model' && importMode.value !== 'file';
     const file = remoteModel ? null : await importFile(importMode.value === 'url' ? importMeta.url : importBlob.value, importMode.value === 'url');
     if (importKind.value === 'model') {
@@ -494,28 +583,46 @@ async function submitImport() {
 }
 
 onMounted(async () => {
+  window.addEventListener('message', onWorkspaceMessage);
   const boot = Promise.all([
     loadModels(), loadDocs(),
     readAll('floods').catch(() => []).then(local => {
-      floods.value = [{ id: 'demo', name: '理想矩形河槽瞬时溃坝示例' }, ...local];
+      floods.value = [{ id: 'demo', name: '山谷尾矿坝 · 溃口发展演示' }, ...local];
     }),
   ]);
   try {
     const { PlatformScene } = await import('./platformScene.js');
     scene = new PlatformScene('platformMap',
       (longitude, latitude) => { if (tab.value === 'flood') probeAt(longitude, latitude); },
-      result => { measurement.value = result; });
+      result => { measurement.value = result; },
+      error => {
+        console.error('三维地图渲染中断', error);
+        const failed = scene;
+        scene = null;
+        mapError.value = error.message || 'WebGL 渲染中断';
+        setTimeout(() => failed?.destroy(), 0);
+      });
   } catch (error) {
     // Clear the blocking widget error panel left by a failed Cesium initialization.
     document.getElementById('platformMap')?.replaceChildren();
     mapError.value = error.message;
   }
   await boot;
-  await Promise.all([changeModel(models.value[0]?.id), showFlood ? loadFlood() : null]);
+  await Promise.all([
+    changeModel(tab.value === 'flood' ? 'valley' : models.value[0]?.id),
+    showFlood ? loadFlood() : null,
+  ]);
 });
+
+function onWorkspaceMessage(event) {
+  if (showFlood && event.origin === location.origin && event.source === window.parent &&
+      event.data?.type === 'hhudam:show-flood') setTab('flood');
+}
+
 onBeforeUnmount(() => {
   clearTimeout(toastTimer);
   clearInterval(playback);
+  window.removeEventListener('message', onWorkspaceMessage);
   scene?.destroy();
   for (const url of objectUrls.values()) URL.revokeObjectURL(url);
 });

@@ -11,11 +11,13 @@
 <p>GitHub Pages 入口使用页面右下角的「原站业务」与「工程分析」切换工作区。原站业务继续使用原账号。若使用私密完整版，管理员从原站左栏进入「工程分析」，普通用户通过「功能菜单」进入模型和资料。</p>
 
 <h2 id="models">三维模型和视角</h2>
-<p>在「三维场景」切换原站实景、示例模型和已导入的模型，再点击总览、俯视、坝前或侧面。支持本地单文件 GLB、可跨域读取的 HTTPS tileset.json、GLB 或 glTF，以及你有权访问的 Cesium ion 资产。对局部模型输入真实的 WGS84 原点、高程和局部 x 轴逆时针旋转角。3D Tiles 通常使用其自身地理变换。</p>
+<p>在「三维场景」切换原站实景、示例模型和已导入的模型，再点击总览、俯视、溃口近景、上游库区、下游河道或坝轴侧面。支持本地单文件 GLB、3D Tiles 文件夹、可跨域读取的 HTTPS tileset.json、GLB 或 glTF，以及有访问权限的 Cesium ion 资产。对局部模型输入真实的 WGS84 原点、高程和局部 x 轴逆时针旋转角。3D Tiles 通常使用其自身地理变换。</p>
+
+<p>使用已获得的原站模型缓存时，先解压 <code>Tailings_Platform_Main.zip</code>，选择「导入 / 添加模型」→「3D Tiles 文件夹」，再选择 <code>resources/models/original_scene</code>。也可以在 Cesium ion 方式下导入资产 <code>4617247</code>，使用自己的只读令牌。</p>
 
 <h2 id="depth">溃坝动画和点查</h2>
 <p>在「溃坝淹没」选择结果，点击「定位计算范围」，播放或拖动时间轴。点击地图或输入 WGS84 经纬度后可读出当前水深、全过程最大水深、首次超过 0.01 米的记录时刻和过程曲线。计算范围外和无有效网格的点单独标记。</p>
-<p>内置矩形河槽结果是演示。可下载<a href="./examples/depth_grid.json">规则水深 JSON</a>和<a href="./examples/depth_grid.csv">规则水深 CSV</a>核对导入格式。</p>
+<p>内置山谷场景由合成地形、给定的溃口过程和二维浅水计算生成。可切换「水流表现」与「水深分级」，并跳到溃口发展和下游淹没时刻。支持启用硬件加速的浏览器使用三维回放，其他设备可用地形平面回放。可下载<a href="./examples/depth_grid.json">规则水深 JSON</a>和<a href="./examples/depth_grid.csv">规则水深 CSV</a>核对导入格式。</p>
 
 <h2 id="openfoam">OpenFOAM 结果</h2>
 <ol>

@@ -5,7 +5,7 @@ export const starterDocs = [
     id: 'guide',
     name: '尾矿库平台操作说明',
     entries: [
-      ['模型导入', '在三维场景中选择「导入 / 添加模型」，可从本机读取单文件 GLB，也可填写可直接读取的 HTTPS tileset.json、GLB、glTF 地址或 Cesium ion 资产编号。GLB 与 glTF 局部模型应填写正确的原点和朝向。完成导入后可在总览、俯视、坝前和侧面之间切换。', 'models'],
+      ['模型导入', '在三维场景中选择「导入 / 添加模型」，可从本机读取单文件 GLB 或 3D Tiles 文件夹，也可填写可直接读取的 HTTPS tileset.json、GLB、glTF 地址或 Cesium ion 资产编号。GLB 与 glTF 局部模型应填写正确的原点和朝向。完成导入后可在总览、俯视、溃口近景、上游库区、下游河道和坝轴侧面之间切换。', 'models'],
       ['OpenFOAM 结果', '网页读取带地理原点的水深网格 JSON 或 time、x、y、bed、depth 规则 CSV。完整 OpenFOAM 算例、PVD、VTK 需先用随附转换工具处理。已有明确 depth 或 h 字段时优先使用该字段。仅有 alpha.water 的三维结果按等效水柱深度解释。', 'openfoam'],
       ['点查水深与缺测', '先选定结果并定位计算范围，再点选地图或输入 WGS84 经纬度。界面报告该点在当前时刻的深度、计算全过程最大深度和首次超过 0.01 米的记录时刻。数据以有效网格点插值，范围外和无有效网格的位置单独标记。', 'depth'],
       ['资料导入与检索', '专业知识区支持带文字层的 PDF、TXT 和 Markdown，可选文件或粘贴文件直链。结果带文件名和页码或章节。扫描版 PDF 可保留原件，全文搜索需要先做 OCR。启用模型接口后，模型依据检索片段组织回答。', 'knowledge'],

@@ -11,3 +11,8 @@ frontend/public/models/dam_schematic.glb
 frontend/public/models/terrain_schematic.glb
 frontend/public/data/flood_demo.json
 frontend/public/openfoam_converter.zip
+frontend/public/models/valley.glb
+frontend/public/models/valley-relief.png
+frontend/public/models/valley-dam/
+frontend/public/data/flood_valley.json
+__pycache__/

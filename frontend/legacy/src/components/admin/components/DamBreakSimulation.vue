@@ -13,8 +13,7 @@
           <p>支持上传文件训练/验证（JSON/CSV/TXT）</p>
         </div>
 
-        <!-- 已移除右侧的实时联机和端口芯片，此处留空以保持布局 -->
-        <div class="header-right"></div>
+        <div class="header-right"><button class="header-chip" @click="openFloodWorkspace">查看三维溃坝回放 ↗</button></div>
       </div>
 
       <!-- 面包屑 -->
@@ -288,7 +287,8 @@
 </template>
 
 <script>
-import { originalAxios as axios } from '../../../originalApi.js';
+import { openFloodWorkspace } from '../../../floodWorkspace.js';
+import { evaluateLinearModel, regressionSamples, trainLinearModel } from '../../../linearFit.js';
 
 export default {
   name: "DamBreakSimulation",
@@ -332,6 +332,7 @@ export default {
     },
   },
   methods: {
+    openFloodWorkspace,
     setStatus(msg, isError = false) {
       this.status = msg;
       this.isError = isError;
@@ -448,29 +449,8 @@ export default {
       this.loading = true;
 
       try {
-        if (this.trainingFile) {
-          const form = new FormData();
-          form.append("file", this.trainingFile);
-          const res = await axios.post("http://localhost:5000/train", form, {
-            headers: { "Content-Type": "multipart/form-data" },
-          });
-          this.applyTrainResponse(res.data);
-          return;
-        }
-
-        let trainingData;
-        try {
-          trainingData = JSON.parse(this.trainingData);
-        } catch {
-          alert("训练数据格式错误，请确保数据为有效的 JSON 格式");
-          this.setStatus("训练数据解析失败：JSON 格式不正确", true);
-          return;
-        }
-
-        const res = await axios.post("http://localhost:5000/train", {
-          data: trainingData,
-        });
-        this.applyTrainResponse(res.data);
+        const samples = await regressionSamples(this.trainingFile, this.trainingData);
+        this.applyTrainResponse(trainLinearModel(samples));
       } catch (error) {
         this.setStatus("发生错误: " + (error?.message || String(error)), true);
       } finally {
@@ -504,31 +484,8 @@ export default {
       this.loading = true;
 
       try {
-        if (this.validationFile) {
-          const form = new FormData();
-          form.append("file", this.validationFile);
-          form.append("model", JSON.stringify(this.model));
-          const res = await axios.post("http://localhost:5000/validate", form, {
-            headers: { "Content-Type": "multipart/form-data" },
-          });
-          this.applyValidateResponse(res.data);
-          return;
-        }
-
-        let validationData;
-        try {
-          validationData = JSON.parse(this.validationData);
-        } catch {
-          alert("验证数据格式错误，请确保数据为有效的 JSON 格式");
-          this.setStatus("验证数据解析失败：JSON 格式不正确", true);
-          return;
-        }
-
-        const res = await axios.post("http://localhost:5000/validate", {
-          model: this.model,
-          validation_data: validationData,
-        });
-        this.applyValidateResponse(res.data);
+        const samples = await regressionSamples(this.validationFile, this.validationData);
+        this.applyValidateResponse(evaluateLinearModel(samples, this.model));
       } catch (error) {
         this.setStatus("验证错误: " + (error?.message || String(error)), true);
       } finally {
@@ -662,7 +619,6 @@ export default {
   justify-content: flex-end;
 }
 
-/* 移除了芯片相关样式，header-chip 和 dot 不再使用，但保留定义以防其他页面引用 */
 .header-chip {
   display: flex;
   align-items: center;
@@ -675,7 +631,10 @@ export default {
   color: #c7f6ff;
   font-size: 13px;
   box-shadow: inset 0 0 24px rgba(42, 140, 201, 0.08);
+  cursor: pointer;
 }
+
+.header-chip:hover { border-color: #93e5f0; }
 
 .dot {
   width: 8px;

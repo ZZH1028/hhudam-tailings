@@ -170,9 +170,7 @@ export default {
   },
   mounted() {
     const sp = new URLSearchParams(window.location.search);
-    const embedByQuery = sp.get('embed') === '1';
-    const embedByIframe = window.self !== window.top;
-    this.embedMode = embedByQuery || embedByIframe;
+    this.embedMode = sp.get('embed') === '1';
   },
   methods: {
     goToModule(name) {

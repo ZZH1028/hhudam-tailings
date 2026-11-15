@@ -171,7 +171,7 @@ export function parseDepthCsv(text, metadata) {
   });
 }
 
-export function queryDepth(dataset, longitude, latitude, frameIndex) {
+export function queryDepth(dataset, longitude, latitude, frameIndex, snapshot) {
   longitude = finiteNumber(longitude, '经度');
   latitude = finiteNumber(latitude, '纬度');
   if (Math.abs(longitude) > 180 || Math.abs(latitude) > 90) throw new Error('查询经纬度超出范围。');
@@ -199,11 +199,65 @@ export function queryDepth(dataset, longitude, latitude, frameIndex) {
   const interpolate = array => indices.reduce((sum, k, n) => sum + weights[n] * array[k], 0);
   const history = dataset.frames.map(frame => interpolate(frame.depth));
   const times = dataset.frames.map(frame => frame.time);
-  const depth = history[frameIndex];
+  const depth = snapshot ? interpolate(snapshot.depth) : history[frameIndex];
   return {
     ...point, depth, history, times, status: depth > 0.01 ? 'wet' : 'dry',
-    water_surface: interpolate(dataset.bed) + dataset.origin.height + depth,
+    water_surface: interpolate(snapshot?.bed || dataset.bed) + dataset.origin.height + depth,
     maximum_depth: Math.max(...history),
     first_wet_time: times[history.findIndex(value => value > 0.01)] ?? null,
   };
+}
+
+// Frames use local E, N coordinates. Keep the datum and sparse breach elevations
+// alongside the corresponding hydraulic frame.
+export function floodFrame(dataset, index, fraction = 0) {
+  const a = dataset.frames[index];
+  const b = dataset.frames[index + 1] || a;
+  const lerp = (start, end) => start + (end - start) * fraction;
+  const mix = (start, end) => fraction && a !== b && end
+    ? Float32Array.from(start, (value, i) => lerp(value, end[i]))
+    : start;
+  let bed = dataset.bed;
+  if (a.bedChange) {
+    bed = Float32Array.from(bed);
+    const changes = mix(a.bedChange, b.bedChange);
+    dataset.bedIndices.forEach((position, i) => { bed[position] = changes[i]; });
+  }
+  return {
+    bed, depth: mix(a.depth, b.depth), speed: a.speed && mix(a.speed, b.speed),
+    stage: lerp(a.stage || 0, b.stage || 0), time: lerp(a.time, b.time),
+  };
+}
+
+export function loadValleyData(input) {
+  const validated = validateDepth(input);
+  validated.bed = Float32Array.from(validated.bed);
+  validated.bedIndices = input.bed_indices;
+  validated.frames = validated.frames.map((frame, i) => ({
+    time: frame.time,
+    depth: Float32Array.from(frame.depth),
+    stage: input.frames[i].stage,
+    speed: Float32Array.from(input.frames[i].speed),
+    bedChange: Float32Array.from(input.frames[i].bed_change),
+  }));
+  return validated;
+}
+
+export function geographicPoint(x, y, dataset) {
+  const { origin, yaw = 0 } = dataset;
+  const angle = radians(yaw);
+  const latStep = 360 / (2 * Math.PI * 6356752.314);
+  const lonStep = 360 / (2 * Math.PI * 6378137 * Math.cos(radians(origin.latitude)));
+  const east = x * Math.cos(angle) - y * Math.sin(angle);
+  const north = x * Math.sin(angle) + y * Math.cos(angle);
+  let longitude = origin.longitude + east * lonStep;
+  let latitude = origin.latitude + north * latStep;
+  for (let i = 0; i < 4; i++) {
+    const [u, v] = gridCoordinates(longitude, latitude, origin, yaw);
+    const dx = x - u;
+    const dy = y - v;
+    longitude += (dx * Math.cos(angle) - dy * Math.sin(angle)) * lonStep;
+    latitude += (dx * Math.sin(angle) + dy * Math.cos(angle)) * latStep;
+  }
+  return [((longitude + 540) % 360) - 180, latitude];
 }

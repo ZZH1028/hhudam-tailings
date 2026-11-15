@@ -214,7 +214,8 @@
         />
 
         <div class="flood-entry pointer-auto" v-if="isDamBreakMode && !panels.floodSim">
-          <button class="flood-btn" @click="openFloodSim">溃坝洪水演示</button>
+          <button class="flood-btn" @click="openFloodWorkspace">三维溃坝洪水回放</button>
+          <button class="flood-btn" @click="openFloodSim">水源扩散测试</button>
         </div>
 
         <div class="flood-panel pointer-auto" v-if="isDamBreakMode && panels.floodSim">
@@ -292,6 +293,7 @@ import {
 import * as CesiumLib from 'cesium';
 import { initCesium, toggleMapInteraction, startMeasurement, stopMeasurement, clearMeasurement, startDrawingArea, stopDrawingArea, finishCurrentArea, clearAllAreas, removeDisasterAreaEntity, updateAreaInfo } from './components/map/CesiumMap';
 import { createFloodSimPlayer } from './components/map/FloodSimPlayer';
+import { openFloodWorkspace } from './floodWorkspace.js';
 
 import Login from './components/login/Login.vue';
 import AdminPanel from './components/admin/AdminPanel.vue';
@@ -909,6 +911,7 @@ export default defineComponent({
       handleFlyToDam,
       isDamBreakMode,
       demoKey,
+      openFloodWorkspace,
       openFloodSim,
       closeFloodSim,
       startFloodDemo,
